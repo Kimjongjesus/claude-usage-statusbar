@@ -1,8 +1,8 @@
 {
   "name": "claude-usage-statusbar",
   "displayName": "Claude Usage Status Bar",
-  "description": "Month-to-date Claude Code spend vs. your monthly budget in the status bar. Local-only, zero dependencies, no network.",
-  "version": "0.1.0",
+  "description": "Month-to-date Claude Code spend vs. your monthly budget, with a themed dashboard. Resets on the 1st. Local-only, zero dependencies, no network.",
+  "version": "0.2.0",
   "publisher": "kimjongjesus",
   "license": "MIT",
   "scripts": { "test": "node test/run.js" },
@@ -19,21 +19,23 @@
   },
   "contributes": {
     "commands": [
-      { "command": "claudeUsage.refresh", "title": "Claude Usage: Refresh" },
-      { "command": "claudeUsage.showDetails", "title": "Claude Usage: Show Breakdown" }
+      { "command": "claudeUsage.showDetails", "title": "Claude Usage: Open Dashboard" },
+      { "command": "claudeUsage.setBudget", "title": "Claude Usage: Set Monthly Budget" },
+      { "command": "claudeUsage.refresh", "title": "Claude Usage: Refresh" }
     ],
     "configuration": {
       "title": "Claude Usage",
       "properties": {
-        "claudeUsage.monthlyBudgetUsd": { "type": "number", "default": 1000, "minimum": 1, "description": "Monthly budget in USD." },
-        "claudeUsage.warnAtPercent": { "type": "number", "default": 75, "description": "Status bar turns yellow at this % of budget." },
-        "claudeUsage.criticalAtPercent": { "type": "number", "default": 90, "description": "Status bar turns red at this % of budget." },
-        "claudeUsage.dataDirs": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Extra Claude Code 'projects' directories to scan (in addition to ~/.claude/projects and $CLAUDE_CONFIG_DIR/projects)." },
+        "claudeUsage.monthlyBudgetUsd": { "type": "number", "default": 1000, "minimum": 1, "description": "Monthly budget in USD. Spend is counted from the 1st of each calendar month (local time)." },
+        "claudeUsage.warnAtPercent": { "type": "number", "default": 75, "minimum": 1, "description": "Status bar turns yellow (and a one-time notice appears) at this % of budget." },
+        "claudeUsage.criticalAtPercent": { "type": "number", "default": 90, "minimum": 1, "description": "Status bar turns red (and a one-time notice appears) at this % of budget." },
+        "claudeUsage.notifyOnThresholds": { "type": "boolean", "default": true, "description": "Show a notification once per month when the warn and critical percentages are reached." },
+        "claudeUsage.dataDirs": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Extra Claude Code 'projects' directories to scan (in addition to ~/.claude/projects and $CLAUDE_CONFIG_DIR/projects). %VAR% and ~ are expanded." },
         "claudeUsage.pricingOverrides": {
           "type": "object", "default": {},
           "description": "Per-model USD per million tokens, matched by substring of the model id. Example: {\"opus-5\": {\"input\": 5, \"output\": 25}}. Cache rates default to 1.25x/2x/0.1x of input."
         },
-        "claudeUsage.refreshSeconds": { "type": "number", "default": 30, "minimum": 5, "description": "Rescan interval in seconds." }
+        "claudeUsage.refreshSeconds": { "type": "number", "default": 30, "minimum": 5, "description": "Safety-net rescan interval in seconds. File changes also trigger a refresh within a few seconds." }
       }
     }
   }

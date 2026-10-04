@@ -24,9 +24,9 @@ test('format: money, bar, model labels', () => {
   assert.strictEqual(f.usdShort(412.3), '$412');
   assert.strictEqual(f.usdShort(41.2), '$41.20');
   assert.strictEqual(f.usdWhole(1000), '$1,000');
-  assert.strictEqual(f.bar(41, 5), '▰▰▱▱▱');
-  assert.strictEqual(f.bar(0, 5), '▱▱▱▱▱');
-  assert.strictEqual(f.bar(250, 5), '▰▰▰▰▰');
+  assert.strictEqual(f.bar(41, 5), '●●○○○');
+  assert.strictEqual(f.bar(0, 5), '○○○○○');
+  assert.strictEqual(f.bar(250, 5), '●●●●●');
   assert.strictEqual(f.modelLabel('claude-sonnet-4-5-20250929'), 'Sonnet 4.5');
   assert.strictEqual(f.modelLabel('claude-opus-4-20250514'), 'Opus 4');
   assert.strictEqual(f.modelLabel('claude-opus-4-1-20250805'), 'Opus 4.1');
@@ -38,7 +38,7 @@ test('format: money, bar, model labels', () => {
 
 test('status bar text is narrow and carries icon, amount, bar and percent', () => {
   const ok = statusText(sample(), derive(sample(), C));
-  assert.strictEqual(ok, '$(pulse) $412 ▰▰▱▱▱ 41%');
+  assert.strictEqual(ok, '$(pulse) $412 ●●○○○ 41%');
   assert.ok(ok.length <= 24);
   assert.ok(statusText(sample({ totalUsd: 800 }), derive(sample({ totalUsd: 800 }), C)).startsWith('$(warning)'));
   assert.ok(statusText(sample({ totalUsd: 950 }), derive(sample({ totalUsd: 950 }), C)).startsWith('$(error)'));
@@ -49,7 +49,7 @@ test('status bar text is narrow and carries icon, amount, bar and percent', () =
 test('hover tooltip has spent/budget, bar, remaining, projection, safe daily, days left, top 3 models', () => {
   const s = sample();
   const md = tooltipMarkdown(s, derive(s, C), { links: true });
-  for (const want of ['## $412.30 / $1,000', '▰', 'Remaining', '$587.70', 'Projected month end', 'Safe daily spend', 'Days left', 'resets November 1',
+  for (const want of ['## $412.30 / $1,000', '█', 'Remaining', '$587.70', 'Projected month end', 'Safe daily spend', 'Days left', 'resets November 1',
     'Opus 4.5', 'Sonnet 4.5', 'Haiku 4.5', 'Estimate from local logs', 'command:claudeUsage.setBudget']) {
     assert.ok(md.includes(want), 'tooltip missing ' + want + '\n' + md);
   }
@@ -93,7 +93,7 @@ test('dashboard: strict CSP and no remote or scriptable content at all', () => {
 test('dashboard renders edge states: empty month, over budget, no logs', () => {
   const empty = sample({ totalUsd: 0, messages: 0, byModel: {}, byProject: {}, daily: new Array(31).fill(0), dirs: [], lastMessageAt: null, elapsedDays: 0.2, dayOfMonth: 1 });
   const h1 = render(empty, derive(empty, C), { nonce: 'x' });
-  assert.ok(h1.includes('Nothing logged this month yet.') && h1.includes('Needs a full day of data') && h1.includes('no Claude Code projects folder found'));
+  assert.ok(h1.includes('Nothing logged this month yet.') && h1.includes('needs a full day of data') && h1.includes('no Claude Code projects folder found'));
   assert.ok(!h1.includes('NaN') && !h1.includes('undefined'));
   const over = sample({ totalUsd: 1300 });
   const h2 = render(over, derive(over, C), { nonce: 'x' });

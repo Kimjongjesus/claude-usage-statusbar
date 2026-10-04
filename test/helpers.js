@@ -4,7 +4,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-function tmpdir(prefix) { return fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), prefix || 'cu-')); }
+function tmpdir(prefix) {
+  const d = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), prefix || 'cu-'));
+  made.push(d);
+  return d;
+}
+const made = [];
+process.on('exit', () => { for (const d of made) { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ } } });
 
 let seq = 0;
 // One assistant message line. `at` is a Date (local time); output tokens drive the cost.

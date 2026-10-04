@@ -77,7 +77,7 @@ test('status bar rolls over on the 1st without a restart (poll timer)', async ()
     ext._test.setClock(() => L(2026, 9, 30, 23, 59));
     ext.activate(ctx);
     const item = vs.items[0];
-    assert.strictEqual(item.text, '$(pulse) $450 ▰▰▱▱▱ 45%', 'September month-to-date at 23:59');
+    assert.strictEqual(item.text, '$(pulse) $450 ●●○○○ 45%', 'September month-to-date at 23:59');
     assert.ok(vs.items.length === 1);
     // Claude keeps working past midnight: a message lands in a new log file on Oct 1.
     writeProjects(projects, { 'p/oct.jsonl': [line({ at: L(2026, 10, 1, 0, 0, 40), out: M15 * 2 })] });
@@ -85,7 +85,7 @@ test('status bar rolls over on the 1st without a restart (poll timer)', async ()
     const poll = live(timers.intervals).find((t) => t.ms === 30000);
     assert.ok(poll, 'a 30s poll interval is running');
     poll.fn(); // the timer ticks; no restart, no config change
-    assert.strictEqual(item.text, '$(pulse) $30.00 ▱▱▱▱▱ 3%', 'October starts from zero + only October usage');
+    assert.strictEqual(item.text, '$(pulse) $30.00 ○○○○○ 3%', 'October starts from zero + only October usage');
     assert.ok(item.tooltip.value.includes('October 2026') && !item.tooltip.value.includes('September 2026'));
     assert.ok(item.backgroundColor === undefined);
   });
@@ -97,12 +97,12 @@ test('status bar rolls over exactly at midnight via the midnight timer (even wit
     let now = L(2026, 9, 30, 23, 59, 30);
     ext._test.setClock(() => now);
     ext.activate(ctx);
-    assert.strictEqual(vs.items[0].text, '$(pulse) $150 ▰▱▱▱▱ 15%');
+    assert.strictEqual(vs.items[0].text, '$(pulse) $150 ●○○○○ 15%');
     const mid = live(timers.timeouts).find((t) => t.ms > 0 && t.ms <= 31000);
     assert.ok(mid, 'a timer is armed for ~30s after 23:59:30, i.e. just past midnight: ' + JSON.stringify(timers.timeouts.map((t) => t.ms)));
     now = L(2026, 10, 1, 0, 0, 1);
     mid.live = false; mid.fn();
-    assert.strictEqual(vs.items[0].text, '$(pulse) $0.00 ▱▱▱▱▱ 0%');
+    assert.strictEqual(vs.items[0].text, '$(pulse) $0.00 ○○○○○ 0%');
     assert.ok(live(timers.timeouts).some((t) => t.ms > 23 * 3600 * 1000), 're-armed for the next midnight');
   });
 });

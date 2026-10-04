@@ -1,4 +1,6 @@
 test/**
+scripts/**
+docs/**
 .vscode/**
 .git/**
 **/*.vsix

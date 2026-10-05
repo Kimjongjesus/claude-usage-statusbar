@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["<HOOKS_DIR>/guard-reads.js", "--mode", "deny"], "timeout": 10 }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["<HOOKS_DIR>/budget-guard.js", "--budget", "1000"], "timeout": 20 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell|mcp__.*",
+        "hooks": [
+          { "type": "command", "command": "node", "args": ["<HOOKS_DIR>/trim-output.js"], "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

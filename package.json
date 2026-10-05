@@ -1,8 +1,8 @@
 {
   "name": "claude-usage-statusbar",
   "displayName": "Claude Usage Status Bar",
-  "description": "Month-to-date Claude Code spend vs. your monthly budget, with a themed dashboard. Resets on the 1st. Local-only, zero dependencies, no network.",
-  "version": "0.2.0",
+  "description": "Month-to-date Claude Code spend vs. your monthly budget, with a themed dashboard, per-session and per-branch cost, a context meter, a waste report and opt-in token-saver hooks. Resets on the 1st. Local-only, zero dependencies, no network.",
+  "version": "0.3.0",
   "publisher": "kimjongjesus",
   "license": "MIT",
   "scripts": { "test": "node test/run.js" },
@@ -20,6 +20,8 @@
   "contributes": {
     "commands": [
       { "command": "claudeUsage.showDetails", "title": "Claude Usage: Open Dashboard" },
+      { "command": "claudeUsage.wasteReport", "title": "Claude Usage: Waste Report" },
+      { "command": "claudeUsage.installHooks", "title": "Claude Usage: Install Token-Saver Hooks" },
       { "command": "claudeUsage.setBudget", "title": "Claude Usage: Set Monthly Budget" },
       { "command": "claudeUsage.refresh", "title": "Claude Usage: Refresh" }
     ],
@@ -35,7 +37,10 @@
           "type": "object", "default": {},
           "description": "Per-model USD per million tokens, matched by substring of the model id. Example: {\"opus-5\": {\"input\": 5, \"output\": 25}}. Cache rates default to 1.25x/2x/0.1x of input."
         },
-        "claudeUsage.refreshSeconds": { "type": "number", "default": 30, "minimum": 5, "description": "Safety-net rescan interval in seconds. File changes also trigger a refresh within a few seconds." }
+        "claudeUsage.refreshSeconds": { "type": "number", "default": 30, "minimum": 5, "description": "Safety-net rescan interval in seconds. File changes also trigger a refresh within a few seconds." },
+        "claudeUsage.contextWindow": { "type": "number", "default": 200000, "minimum": 1000, "description": "Context window of the model you use, in tokens. Used for the context meter (ctx 142k / 200k). Set 1000000 for a 1M-context model." },
+        "claudeUsage.contextNudgeAt": { "type": "number", "default": 150000, "minimum": 0, "description": "One notice per session when its context reaches this many tokens (what each request re-sends, and what /compact or /clear would save). 0 turns the notice off." },
+        "claudeUsage.contextHintAtPercent": { "type": "number", "default": 50, "minimum": 1, "maximum": 100, "description": "Show a 'ctx 142k' hint in the status bar once the current session's context is at least this % of the context window." }
       }
     }
   }

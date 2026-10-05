@@ -10,7 +10,7 @@ const { tmpdir, line, writeProjects, M15 } = require('./helpers');
 const L = (y, mo, d, h, mi, s) => new Date(y, mo - 1, d, h || 0, mi || 0, s || 0);
 
 function makeVscode() {
-  const v = { items: [], messages: [], panels: [], inputs: [], settings: {}, updates: [], cmds: {}, cfgListeners: [] };
+  const v = { items: [], messages: [], panels: [], inputs: [], settings: {}, updates: [], cmds: {}, cfgListeners: [], infos: [], picks: [], pickQueue: [], docs: [], clipboard: [] };
   v.StatusBarAlignment = { Right: 2 };
   v.ConfigurationTarget = { Global: 1 };
   v.ViewColumn = { Active: -1 };
@@ -18,16 +18,22 @@ function makeVscode() {
   v.MarkdownString = class { constructor(value, icons) { this.value = value; this.supportThemeIcons = icons; } };
   v.window = {
     createStatusBarItem: () => { const i = { show() {}, dispose() {} }; v.items.push(i); return i; },
-    showWarningMessage: (m) => { v.messages.push({ level: 'warn', m }); return Promise.resolve(undefined); },
+    showWarningMessage: (m, ...rest) => { v.messages.push({ level: 'warn', m, rest }); const r = v.nextWarn; v.nextWarn = undefined; return Promise.resolve(r); },
     showErrorMessage: (m) => { v.messages.push({ level: 'crit', m }); return Promise.resolve(undefined); },
+    showInformationMessage: (m, ...buttons) => { v.infos.push({ m, buttons }); return Promise.resolve(v.nextInfo); },
     showInputBox: (o) => { v.inputs.push(o); return Promise.resolve(v.nextInput); },
+    showQuickPick: (items, o) => { v.picks.push({ items, o }); const r = v.pickQueue.shift(); return Promise.resolve(typeof r === 'function' ? r(items) : r); },
+    showTextDocument: () => Promise.resolve(),
     createWebviewPanel: (type, title, col, opts) => {
       const p = { type, title, opts, webview: { html: '' }, reveal() {}, onDidDispose(cb) { p._dispose = cb; } };
       v.panels.push(p); return p;
     },
   };
+  v.env = { clipboard: { writeText: (t) => { v.clipboard.push(t); return Promise.resolve(); } } };
   v.commands = { registerCommand: (n, fn) => { v.cmds[n] = fn; return { dispose() {} }; } };
   v.workspace = {
+    workspaceFolders: undefined,
+    openTextDocument: (o) => { v.docs.push(o); return Promise.resolve(o); },
     getConfiguration: () => ({
       get: (k, d) => (k in v.settings ? v.settings[k] : d),
       inspect: (k) => ({ globalValue: v.settings[k] }),
@@ -55,7 +61,7 @@ async function withExtension(setup, body) {
   global.setTimeout = (fn, ms) => { const t = { fn, ms, live: true }; timers.timeouts.push(t); return t; };
   global.clearTimeout = (t) => { if (t) t.live = false; };
   const store = {};
-  const ctx = { subscriptions: [], globalState: { get: (k, d) => (k in store ? store[k] : d), update: (k, val) => { store[k] = val; return Promise.resolve(); } } };
+  const ctx = { subscriptions: [], extensionPath: path.join(__dirname, '..'), globalState: { get: (k, d) => (k in store ? store[k] : d), update: (k, val) => { store[k] = val; return Promise.resolve(); } } };
   delete require.cache[require.resolve('../extension')];
   const ext = require('../extension');
   try {
@@ -211,6 +217,8 @@ test('hover is a themed-icon MarkdownString that only trusts its own commands', 
     ext.activate(ctx);
     const tip = vs.items[0].tooltip;
     assert.strictEqual(tip.supportThemeIcons, true);
-    assert.deepStrictEqual(tip.isTrusted.enabledCommands.sort(), ['claudeUsage.refresh', 'claudeUsage.setBudget', 'claudeUsage.showDetails']);
+    assert.deepStrictEqual(tip.isTrusted.enabledCommands.sort(), ['claudeUsage.refresh', 'claudeUsage.setBudget', 'claudeUsage.showDetails', 'claudeUsage.wasteReport']);
   });
 });
+
+module.exports = { makeVscode, withExtension, live, L };

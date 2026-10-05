@@ -1,6 +1,7 @@
 'use strict';
 // Waste report: every number is derived from the logs; heuristics are labelled.
 const assert = require('assert');
+const path = require('path');
 const { test } = require('./harness');
 const { tmpdir, writeProjects, asst, toolResult, titleLine } = require('./helpers');
 const { summarize } = require('../lib/usage');
@@ -164,4 +165,17 @@ test('dashboard: sessions, branch breakdown and context card render, month headl
   assert.ok(html.indexOf('this month') < html.indexOf('Current session') && html.indexOf('Current session') < html.indexOf('Recent sessions'));
   for (const want of ['By branch (feature)', 'feature/a', 'Recent sessions', '142k / 200k', 'active now', 'command:claudeUsage.wasteReport']) assert.ok(html.includes(want), want);
   assert.ok(!/<script/i.test(html) && !/\sstyle\s*=/i.test(html));
+});
+
+test('dashboard footer shows the home folder as ~ (Windows and POSIX), leaves other paths alone', () => {
+  const { tilde } = require('../lib/dashboard');
+  assert.strictEqual(tilde('C:\\Users\\Eli\\.claude\\projects', 'C:\\Users\\Eli'), '~\\.claude\\projects');
+  assert.strictEqual(tilde('c:\\users\\eli\\.claude\\projects', 'C:\\Users\\Eli\\'), '~\\.claude\\projects', 'case-insensitive, trailing slash ok');
+  assert.strictEqual(tilde('/home/eli/.claude/projects', '/home/eli'), '~/.claude/projects');
+  assert.strictEqual(tilde('D:\\logs\\projects', 'C:\\Users\\Eli'), 'D:\\logs\\projects');
+  assert.strictEqual(tilde('C:\\Users\\Elias\\.claude', 'C:\\Users\\Eli'), 'C:\\Users\\Elias\\.claude', 'a longer sibling name is not the home folder');
+  assert.strictEqual(tilde('/x/y', undefined), '/x/y');
+  const s = scenario();
+  const html = renderDash(s, derive(s, { budget: 1000, warn: 75, crit: 90 }), { nonce: 'n', home: path.dirname(s.dirs[0]) });
+  assert.ok(html.includes('Scanned: ~'), 'footer uses ~');
 });

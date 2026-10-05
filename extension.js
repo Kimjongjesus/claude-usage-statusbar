@@ -121,7 +121,7 @@ function maybeNudge(cx, c) {
 function html() {
   const { s, d, now, cx } = last;
   const nonce = crypto.randomBytes(16).toString('base64');
-  return render(s, d, { nonce, updatedAt: now, history: mergedHistory(s), context: cx });
+  return render(s, d, { nonce, updatedAt: now, history: mergedHistory(s), context: cx, home: os.homedir() });
 }
 function renderPanel() { if (panel && last) panel.webview.html = html(); }
 

@@ -158,6 +158,85 @@ test('the installed copy works on its own: scripts run from ~/.claude/token-save
 
 // ---- the command inside the extension --------------------------------------------------------------------------
 const pickId = (id) => (items) => items.find((i) => i.id === id);
+
+// ---- plan -> confirm -> apply races (reviewer r1) ---------------------------------------------------------------
+test('settings edited while the confirmation was open: nothing is written, the user\'s newer edits and deny rules survive', () => {
+  const home = tmpdir('inst-');
+  const settings = path.join(home, '.claude', 'settings.json');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  fs.writeFileSync(settings, JSON.stringify({ model: 'sonnet' }));
+  const p = hi.plan({ home, budget: 1000, picks: ALL, scope: 'user' });
+  const edited = JSON.stringify({ model: 'opus', permissions: { deny: ['Read(./private/**)'] } });
+  fs.writeFileSync(settings, edited); // the user edits settings.json while the modal is up
+  const before = listAll(home);
+  assert.throws(() => hi.apply(p, ROOT), /changed while the confirmation was open/);
+  assert.strictEqual(read(settings), edited, 'newer edits and the deny rule are intact');
+  assert.deepStrictEqual(listAll(home), before, 'no scripts, backup or temp file were written');
+  // a fresh plan sees the new content and keeps it
+  hi.apply(hi.plan({ home, budget: 1000, picks: ALL, scope: 'user' }), ROOT);
+  const now = readJson(settings);
+  assert.strictEqual(now.model, 'opus'); assert.ok(now.permissions.deny.includes('Read(./private/**)')); assert.ok(now.hooks.PreToolUse);
+});
+
+test('settings created while the confirmation was open (none existed at plan time): never overwritten', () => {
+  const home = tmpdir('inst-');
+  const settings = path.join(home, '.claude', 'settings.json');
+  const p = hi.plan({ home, budget: 1000, picks: ALL, scope: 'user' });
+  assert.strictEqual(p.existed, false);
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  const theirs = JSON.stringify({ permissions: { deny: ['Bash(rm:*)'] } });
+  fs.writeFileSync(settings, theirs);
+  const before = listAll(home);
+  assert.throws(() => hi.apply(p, ROOT), /changed while the confirmation was open/);
+  assert.strictEqual(read(settings), theirs); assert.deepStrictEqual(listAll(home), before);
+  // exclusive create is the second line of defence if the file appears between the re-check and the write
+  const fired0 = false; let fired = fired0;
+  const p2 = hi.plan({ home: tmpdir('inst-'), budget: 1000, picks: ALL, scope: 'user' });
+  fs.mkdirSync(path.dirname(p2.file), { recursive: true });
+  const origWrite = fs.writeFileSync;
+  fs.writeFileSync = function (f, d, o) { if (f === p2.file && !fired) { fired = true; origWrite.call(fs, f, theirs); } return origWrite.call(fs, f, d, o); };
+  try { assert.throws(() => hi.apply(p2, ROOT), /was created while the confirmation was open/); } finally { fs.writeFileSync = origWrite; }
+  assert.strictEqual(read(p2.file), theirs, 'a file that appeared at the last moment is kept');
+});
+
+test('settings removed while the confirmation was open: aborts instead of recreating from a stale plan', () => {
+  const home = tmpdir('inst-');
+  const settings = path.join(home, '.claude', 'settings.json');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  fs.writeFileSync(settings, JSON.stringify({ model: 'sonnet' }));
+  const p = hi.plan({ home, budget: 1000, picks: ALL, scope: 'user' });
+  fs.unlinkSync(settings);
+  assert.throws(() => hi.apply(p, ROOT), /changed while the confirmation was open/);
+  assert.ok(!fs.existsSync(settings));
+});
+
+test('a settings path that cannot be read (not ENOENT) is an error, never treated as "no file"', () => {
+  const home = tmpdir('inst-');
+  fs.mkdirSync(path.join(home, '.claude', 'settings.json'), { recursive: true }); // a directory where the file should be
+  const p = hi.plan({ home, budget: 1000, picks: ALL, scope: 'user' });
+  assert.ok(p.error && /Could not read/.test(p.error) && /Nothing will be written/.test(p.error), String(p.error));
+  assert.strictEqual(p.existed, false);
+  const before = listAll(home);
+  assert.throws(() => hi.apply(p, ROOT), /Could not read/);
+  assert.deepStrictEqual(listAll(home), before);
+});
+
+test('backups never overwrite an earlier backup, even with the same timestamp', () => {
+  const home = tmpdir('inst-');
+  const settings = path.join(home, '.claude', 'settings.json');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  const first = JSON.stringify({ model: 'one' });
+  fs.writeFileSync(settings, first);
+  const now = new Date(2026, 9, 5, 14, 3, 9);
+  const p1 = hi.plan({ home, budget: 1000, picks: ALL, scope: 'user', now });
+  const r1 = hi.apply(p1, ROOT);
+  const p2 = hi.plan({ home, budget: 900, picks: ALL, scope: 'user', now }); // same second -> same wanted backup name
+  assert.strictEqual(p2.backup, p1.backup);
+  const r2 = hi.apply(p2, ROOT);
+  assert.notStrictEqual(r2.backup, r1.backup);
+  assert.strictEqual(read(r1.backup), first, 'the first backup still holds the original file');
+  assert.deepStrictEqual(readJson(r2.backup).hooks.UserPromptSubmit[0].hooks[0].args.slice(1), ['--budget', '1000'], 'second backup holds the first install');
+});
 const pickedAll = (items) => items.filter((i) => i.picked);
 
 test('command: shows a preview, writes NOTHING until the user confirms (cancel at every step leaves the disk unchanged)', async () => {

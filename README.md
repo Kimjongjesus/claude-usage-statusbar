@@ -67,7 +67,7 @@ Node-only [Claude Code hooks](hooks/README.md) plus templates, in `hooks/` and `
 
 The templates are generic with `{{PLACEHOLDERS}}` for your own project.
 
-**Install:** Command Palette, **Claude Usage: Install Token-Saver Hooks**. It opens a preview of what it would do, then asks. Nothing is written until you pick an install option and click **Write files** in a confirmation that lists every file. It copies the scripts to `~/.claude/token-saver-hooks`, saves a timestamped backup of your settings file, and merges the hooks in without touching your own hooks and permissions. A settings file that is not valid JSON is never touched. "Copy the snippet" options write nothing.
+**Install:** Command Palette, **Claude Usage: Install Token-Saver Hooks**. It opens a preview of what it would do, then asks. Nothing is written until you pick an install option and click **Write files** in a confirmation that lists every file. It copies the scripts to `~/.claude/token-saver-hooks`, saves a timestamped backup of your settings file, and merges the hooks in without touching your own hooks and permissions. A settings file that is not valid JSON, or cannot be read, is never touched. If the settings file is edited, created or removed while the confirmation is open, the install aborts without writing anything and you run the command again to review the current settings. Backups never overwrite an earlier backup. "Copy the snippet" options write nothing.
 
 ![Install confirmation](docs/screenshots/install-confirm-dark.png)
 

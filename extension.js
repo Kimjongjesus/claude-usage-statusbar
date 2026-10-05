@@ -224,7 +224,7 @@ async function installHooks() {
   if (go !== 'Write files') return;
   try {
     const res = hooksInstall.apply(p, (ctx && ctx.extensionPath) || __dirname);
-    vscode.window.showInformationMessage(`Token-Saver hooks installed (${res.written.length} files). New Claude Code sessions pick them up. ${p.backup ? 'Backup: ' + path.basename(p.backup) : ''}`);
+    vscode.window.showInformationMessage(`Token-Saver hooks installed (${res.written.length} files). New Claude Code sessions pick them up. ${res.backup ? 'Backup: ' + path.basename(res.backup) : ''}`);
   } catch (e) {
     vscode.window.showErrorMessage('Install failed: ' + ((e && e.message) || e));
   }

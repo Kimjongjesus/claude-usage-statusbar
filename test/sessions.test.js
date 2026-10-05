@@ -171,6 +171,40 @@ test('incremental parse: appended lines are picked up, a half-written last line 
   close(summarize({ now, dirs: [root] }).totalUsd, 5, 'rewritten file is re-read from the start');
 });
 
+test('same-size / same-prefix rewrites and replacements are re-read, not trusted as appends (reviewer r1)', () => {
+  const root = tmpdir();
+  const file = path.join(root, 'hub', 's.jsonl');
+  const now = L(2026, 10, 4);
+  const A = asst({ at: L(2026, 10, 3, 9), sid: 's', id: 'A', usage: { output: 1000 } });
+  const B = asst({ at: L(2026, 10, 3, 10), sid: 's', id: 'B', usage: { output: 1000 } });
+  writeProjects(root, { 'hub/s.jsonl': [A, B] });
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.03);
+  // second message rewritten in place: identical size, identical first bytes, new mtime
+  const B9 = B.replace('"output_tokens":1000', '"output_tokens":9000');
+  assert.strictEqual(B9.length, B.length); assert.notStrictEqual(B9, B);
+  fs.writeFileSync(file, A + '\n' + B9 + '\n');
+  fs.utimesSync(file, new Date(), new Date(Date.now() + 5000));
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.15, 'same-size rewrite re-read');
+  // rewritten AND grown, still starting with the very same first line
+  const C = asst({ at: L(2026, 10, 3, 11), sid: 's', id: 'C', usage: { output: 2000 } });
+  fs.writeFileSync(file, A + '\n' + B + '\n' + C + '\n');
+  fs.utimesSync(file, new Date(), new Date(Date.now() + 10000));
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.06, 'grown file whose earlier bytes changed is parsed from the start');
+  // replaced by a different, longer file that shares only the first line
+  const D = asst({ at: L(2026, 10, 3, 12), sid: 's', id: 'D', usage: { output: 4000 } });
+  fs.writeFileSync(file, A + '\n' + D + '\n' + D.replace('"id":"msD"', '"id":"msE"').replace('rqD', 'rqE') + '\n');
+  fs.utimesSync(file, new Date(), new Date(Date.now() + 15000));
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.015 + 0.06 + 0.06, 'replacement parsed from the start');
+  // a genuine append after all that is still picked up incrementally and counted once
+  fs.appendFileSync(file, asst({ at: L(2026, 10, 3, 13), sid: 's', id: 'F', usage: { output: 1000 } }) + '\n');
+  fs.utimesSync(file, new Date(), new Date(Date.now() + 20000));
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.015 + 0.06 + 0.06 + 0.015, 'append still counted');
+  // truncated below what was consumed
+  fs.writeFileSync(file, A + '\n');
+  fs.utimesSync(file, new Date(), new Date(Date.now() + 25000));
+  close(summarize({ now, dirs: [root] }).totalUsd, 0.015, 'shrunk file re-read');
+});
+
 test('a final line without a trailing newline still counts when it is complete JSON (CRLF files too)', () => {
   const root = tmpdir();
   const A = asst({ at: L(2026, 10, 3, 9), sid: 's', id: 'A', usage: { output: M15 } });

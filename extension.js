@@ -163,7 +163,7 @@ These are **opt-in** Claude Code hooks written in Node (they run the same on Win
 | Hook | Event | What it does |
 |:--|:--|:--|
 | guard-reads.js | PreToolUse (Read, Grep, Glob) | Blocks node_modules/dist/build, lockfiles, minified files, binaries and huge files |
-| budget-guard.js | UserPromptSubmit | Warns you once per session at ${'75% / 90%'} of the month's budget |
+| budget-guard.js | UserPromptSubmit | Warns you once per session at 75% and again at 90% of the month's budget |
 | trim-output.js | PostToolUse (Bash, PowerShell, MCP) | Shortens huge command output before Claude reads it (Read/Grep/Glob output cannot be trimmed by hooks) |
 
 Install copies the scripts to \`${p.dir}\`, backs up your settings file and merges the entries below into it. Your own hooks and permissions are kept.

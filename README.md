@@ -208,6 +208,8 @@ Current `vsce` (4.x) needs Node 20 or newer; older `vsce` versions on older Node
 
 `node scripts/make-fixture.js <dir> [--handoff <project-dir>]` writes a fake Claude history (several months, branches, a bloated session, repeated reads, huge tool results, live sessions in every hub state) under `<dir>/.claude/projects`, and with `--handoff` a saved plan like the hook writes. It is not shipped in the .vsix. _All screenshots use this fake data, not real usage._
 
+**Window-resize sweep (optional, dev only).** `node scripts/render-pages.js <fixture-home> <out-dir> [--stress]` writes the dashboard, hub, waste report and hover as static HTML in the light, dark and high-contrast theme variables (`--stress` swaps in very long project and branch names), and `python3 scripts/resize-sweep.py <out-dir>` loads them in headless Chromium at widths from 280 to 1600px, 100/150/200% zoom and short heights, and reports page overflow, off-screen buttons, clipped or overlapping text, tables that break out of their card and unreadably small chart text. It needs the `playwright` Python package and a Chromium; nothing here is part of the extension, the .vsix or `npm test`. The markup and CSS rules the sweep found are pinned by `test/layout.test.js`, which needs no browser.
+
 ## Limitations
 - Only counts usage logged on this machine. If `~/.claude` is deleted, the current month's number is gone (past-month totals the extension already saw are kept in VS Code's global state for the small "Previous months" list, and are never added to this month).
 - Prices are hard-coded estimates and may drift when Anthropic changes them.

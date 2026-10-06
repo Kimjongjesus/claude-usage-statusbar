@@ -57,6 +57,26 @@ test('manifest: no telemetry-ish contributions and the "estimate" disclosure is 
   assert.ok(!props.some((p) => /telemetry|analytics|endpoint|url|apikey|token/i.test(p)), props.join(','));
   const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
   assert.ok(/estimate/i.test(readme) && /1st/.test(readme) && /Install from VSIX/i.test(readme));
+  assert.ok(readme.includes('code --install-extension claude-usage-statusbar-' + pkg.version + '.vsix'), 'README install command matches the package version');
+  for (const shot of readme.match(/docs\/screenshots\/[\w-]+\.png/g)) assert.ok(fs.existsSync(path.join(ROOT, shot)), shot);
+});
+
+test('public repo hygiene: no real home paths or private network addresses in shipped code, tests, fixtures and docs', () => {
+  const files = [];
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      if (['.git', 'node_modules', 'screenshots'].includes(e.name)) continue;
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p); else if (/\.(js|json|jsonl|md)$/.test(e.name)) files.push(p);
+    }
+  })(ROOT);
+  // fake fixtures use /home/a, /home/u, /home/alex and C:\Users\Alex only
+  const bad = /(\/home\/(?!a\/|u\/|alex\/|you\/)[a-z]+\/|\b192\.168\.\d+\.\d+\b)/i;
+  for (const f of files) {
+    const src = fs.readFileSync(f, 'utf8');
+    const m = bad.exec(src);
+    assert.ok(!m, `${path.relative(ROOT, f)}: "${m && m[0]}"`);
+  }
 });
 
 test('manifest declares the commands the code registers', () => {
@@ -76,7 +96,7 @@ test('hooks and templates ship in the .vsix (not excluded by .vscodeignore)', ()
     assert.ok(!ignore.some((l) => l === shipped || l.startsWith(shipped + '/')), shipped + ' is ignored by .vscodeignore');
     assert.ok(fs.existsSync(path.join(ROOT, shipped)), shipped + ' exists');
   }
-  for (const f of ['hooks/guard-reads.js', 'hooks/budget-guard.js', 'hooks/trim-output.js', 'hooks/README.md', 'templates/CLAUDE.template.md', 'templates/.claude/commands/new-dashboard.md']) {
+  for (const f of ['hooks/guard-reads.js', 'hooks/budget-guard.js', 'hooks/trim-output.js', 'hooks/save-plan.js', 'hooks/README.md', 'templates/CLAUDE.template.md', 'templates/.claude/commands/new-dashboard.md']) {
     assert.ok(fs.existsSync(path.join(ROOT, f)), f);
   }
   // dot-folders are packaged by vsce unless ignored; make sure the commands template is not

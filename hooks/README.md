@@ -27,10 +27,13 @@ Limits worth knowing: `updatedToolOutput` only changes what Claude sees afterwar
 | `guard-reads.js` | `PreToolUse`, `Read\|Grep\|Glob` | Denies `node_modules`, `dist`, `build`, `.next`, `coverage`, `.git`... folders, lockfiles, minified files and source maps, binaries (by extension, then by looking for NUL bytes), and text files over `--max-kb` (default 200 KB) read in full. Reads with `offset`/`limit` are allowed. Images and PDFs are allowed up to `--max-binary-kb` (default 4 MB) |
 | `budget-guard.js` | `UserPromptSubmit` | Computes month-to-date spend from the local logs (same estimate as the status bar) and warns once per session at 75% and again at 90%. `--block-over 100` can refuse new prompts over the limit (off by default) |
 | `trim-output.js` | `PostToolUse`, `Bash\|PowerShell\|mcp__.*` | Keeps the first and last 6,000 characters of any output field over 15,000 characters and says how much it dropped |
+| `save-plan.js` (Plan Handoff, installed separately) | `PreToolUse`, `ExitPlanMode` | Saves the plan Claude presents (`tool_input.plan`, or the Markdown file in `tool_input.planFilePath`) to `<project>/.claude/handoffs/<yyyymmdd-hhmmss>.md`, where the extension offers to send it to a new session. Never blocks, prints nothing. The project is `$CLAUDE_PROJECT_DIR`, else the event's `cwd` |
 
 Options go in the hook's `args` list; see the header comment of each script. Common ones: `--mode deny|ask|warn`, `--allow <text>` (never block a path containing this text, repeatable), `--budget 1000`, `--warn 75 --crit 90`.
 
-Files the scripts touch: they read the hook JSON from stdin and (budget guard) the Claude Code logs under `~/.claude/projects`, read-only. The **only** file any of them writes is `~/.claude/token-saver-state.json` (budget guard: which sessions were already warned, and a 60-second cache of the spend number).
+Files the scripts touch: they read the hook JSON from stdin and (budget guard) the Claude Code logs under `~/.claude/projects`, read-only. Files written: `~/.claude/token-saver-state.json` (budget guard: which sessions were already warned, and a 60-second cache of the spend number), and, for the opt-in plan hook only, the saved plans in `<project>/.claude/handoffs/` plus a `.gitignore` (`*`) there so they are never committed. A saved plan never overwrites another one.
+
+The plan hook is installed by its own command, **Claude Usage: Set Up Plan Handoff** (same preview, confirmation, backup and re-check as the token-saver install). Installing one set never removes the other set's entries. Manual install: copy `_common.js` and `save-plan.js` to your hooks folder and add `{ "matcher": "ExitPlanMode", "hooks": [{ "type": "command", "command": "node", "args": ["<HOOKS_DIR>/save-plan.js"], "timeout": 10 }] }` to `hooks.PreToolUse`.
 
 ## Manual install (instead of the command)
 
@@ -47,4 +50,4 @@ The snippet uses Claude Code's exec form (`"command": "node"` plus `"args"`), wh
 - A project `CLAUDE.md` that lists what **not** to read: see `templates/CLAUDE.template.md`.
 
 ## Uninstall
-Delete the `token-saver-hooks` folder and remove the entries whose command path contains `token-saver-hooks` from your settings (the installer left a `.bak-<timestamp>` copy of your settings next to the file).
+Delete the `token-saver-hooks` folder and remove the entries whose command path contains `token-saver-hooks` from your settings (the installer left a `.bak-<timestamp>` copy of your settings next to the file). Saved plans live in each project's `.claude/handoffs/` folder; delete it whenever you like.

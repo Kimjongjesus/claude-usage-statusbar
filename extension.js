@@ -312,11 +312,11 @@ async function offerHandoff(e, fromHub) {
 }
 
 async function pickModelEffort(sug) {
+  // The suggestion comes first, so Enter accepts it.
   const models = [
     { label: 'Opus', id: 'opus', description: sug.model === 'opus' ? 'suggested' : 'deep reasoning, multi-module work' },
     { label: 'Sonnet', id: 'sonnet', description: sug.model === 'sonnet' ? 'suggested' : 'routine work, cheaper' },
-    { label: 'Other model…', id: 'other', description: 'type an alias or a full model name' },
-  ];
+  ].sort((a, b) => (b.id === sug.model) - (a.id === sug.model)).concat([{ label: 'Other model…', id: 'other', description: 'type an alias or a full model name' }]);
   const m = await vscode.window.showQuickPick(models, { title: 'Model for the new session', placeHolder: `Suggested: ${advice.label(sug.model, sug.effort)}` });
   if (!m) return null;
   let model = m.id;
@@ -326,7 +326,8 @@ async function pickModelEffort(sug) {
     if (!v) return null;
     model = v;
   }
-  const efforts = advice.EFFORTS.map((x) => ({ label: x, id: x, description: x === sug.effort ? 'suggested' : '' }));
+  const efforts = advice.EFFORTS.map((x) => ({ label: x, id: x, description: x === sug.effort ? 'suggested' : '' }))
+    .sort((a, b) => (b.id === sug.effort) - (a.id === sug.effort));
   const ef = await vscode.window.showQuickPick(efforts, { title: 'Effort (thinking level) for the new session', placeHolder: `Suggested: ${sug.effort}` });
   if (!ef) return null;
   return { model, effort: ef.id };

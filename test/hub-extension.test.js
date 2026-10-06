@@ -137,8 +137,9 @@ test('plan handoff: Change lets you pick model and effort; Skip records it; the 
     vs.pickQueue = [(items) => items.find((i) => i.id === 'sonnet'), (items) => items.find((i) => i.id === 'low')];
     ext.activate(ctx);
     await tick();
-    assert.ok(vs.picks[0].items.find((i) => i.id === 'opus').description === 'suggested');
-    assert.deepStrictEqual(vs.picks[1].items.map((i) => i.id), ['low', 'medium', 'high', 'xhigh', 'max']);
+    assert.deepStrictEqual(vs.picks[0].items.map((i) => i.id), ['opus', 'sonnet', 'other'], 'suggested model first (Enter accepts it)');
+    assert.strictEqual(vs.picks[0].items[0].description, 'suggested');
+    assert.deepStrictEqual(vs.picks[1].items.map((i) => i.id), ['high', 'low', 'medium', 'xhigh', 'max'], 'suggested effort first, then the levels `claude --help` lists');
     assert.ok(/^claude --model sonnet --effort low "@\.claude\/handoffs\/20261014-145900\.md /.test(vs.terminals[0].sent[0]));
     // "Other model…" goes through a validated input box
     plan(ws, '20261014-145930.md', '# Small fix\n- src/a.ts\n', ago(0.5));

@@ -17,10 +17,10 @@ Version 0.4 adds an **Orchestration Hub** (every project and session on one spen
 | ![Hover, dark](docs/screenshots/hover-dark.png) | ![Hover, light](docs/screenshots/hover-light.png) |
 
 ## Install from a GitHub release (no marketplace needed)
-1. Download `claude-usage-statusbar-0.4.0.vsix` from the repo's **Releases** page (or build it, see [Build / test](#build--test)).
+1. Download `claude-usage-statusbar-0.4.1.vsix` from the repo's **Releases** page (or build it, see [Build / test](#build--test)).
 2. Install it:
    ```
-   code --install-extension claude-usage-statusbar-0.4.0.vsix
+   code --install-extension claude-usage-statusbar-0.4.1.vsix
    ```
    Or in VS Code: Extensions panel, `...` menu, **Install from VSIX...**, pick the file.
 3. The status bar items appear on the right. Installing a newer `.vsix` the same way upgrades it; your settings and history stay.
@@ -178,7 +178,7 @@ Checked against real Claude Code 2.1 transcripts:
 - One notification at the warning % and one at the critical %, **once per month each**.
 
 ## If your IT policy blocks VSIX installs
-Copy this repo into `%USERPROFILE%\.vscode\extensions\kimjongjesus.claude-usage-statusbar-0.4.0` and restart VS Code. The hooks and templates are in the installed extension folder (`hooks\`, `templates\`) and in this repo.
+Copy this repo into `%USERPROFILE%\.vscode\extensions\kimjongjesus.claude-usage-statusbar-0.4.1` and restart VS Code. The hooks and templates are in the installed extension folder (`hooks\`, `templates\`) and in this repo.
 
 ## Settings
 | Setting | Default | |

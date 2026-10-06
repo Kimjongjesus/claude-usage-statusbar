@@ -84,7 +84,7 @@ test('manifest declares the commands the code registers', () => {
   assert.deepStrictEqual(declared, ['claudeUsage.hubAction', 'claudeUsage.installHooks', 'claudeUsage.refresh', 'claudeUsage.sendPlan', 'claudeUsage.setBudget', 'claudeUsage.setupHandoff', 'claudeUsage.showDetails', 'claudeUsage.showHub', 'claudeUsage.wasteReport']);
   const src = fs.readFileSync(path.join(ROOT, 'extension.js'), 'utf8');
   for (const c of declared) assert.ok(src.includes(`'${c}'`), c);
-  assert.strictEqual(pkg.version, '0.4.0');
+  assert.strictEqual(pkg.version, '0.4.1');
   const titles = Object.fromEntries(pkg.contributes.commands.map((c) => [c.command, c.title]));
   assert.strictEqual(titles['claudeUsage.wasteReport'], 'Claude Usage: Waste Report');
   assert.strictEqual(titles['claudeUsage.installHooks'], 'Claude Usage: Install Token-Saver Hooks');

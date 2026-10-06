@@ -2,7 +2,7 @@
   "name": "claude-usage-statusbar",
   "displayName": "Claude Usage Status Bar",
   "description": "Month-to-date Claude Code spend vs. your monthly budget, an orchestration hub for every project and session, plan handoff to a fresh session with a suggested model and effort, a themed dashboard, a context meter, a waste report and opt-in token-saver hooks. Local-only, zero dependencies, no network.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "kimjongjesus",
   "license": "MIT",
   "scripts": { "test": "node test/run.js" },

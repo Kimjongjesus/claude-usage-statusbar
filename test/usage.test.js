@@ -28,8 +28,8 @@ test('CRLF logs and the Windows fixture parse correctly', () => {
   const recs = parseText(text);
   assert.strictEqual(recs.size, 2); // user line has no usage; <synthetic> skipped
   const root = tmpdir();
-  fs.mkdirSync(path.join(root, 'C--Users-Eli-work-payments-api'));
-  fs.writeFileSync(path.join(root, 'C--Users-Eli-work-payments-api', 'a.jsonl'), text);
+  fs.mkdirSync(path.join(root, 'C--Users-Alex-work-payments-api'));
+  fs.writeFileSync(path.join(root, 'C--Users-Alex-work-payments-api', 'a.jsonl'), text);
   const s = summarize({ now: L(2026, 10, 20, 9), dirs: [root] });
   close(s.totalUsd, 5 + 25); // $5 input + $25 output on Opus 4.5
   assert.deepStrictEqual(Object.keys(s.byProject), ['payments-api']); // from the Windows cwd, not the encoded dir
@@ -37,9 +37,9 @@ test('CRLF logs and the Windows fixture parse correctly', () => {
 
 test('project falls back to the first folder under projects/ (subagent logs stay in their project)', () => {
   const root = tmpdir();
-  writeProjects(root, { 'C--Users-Eli-app/sess/subagents/agent-1.jsonl': [line({ at: L(2026, 10, 3, 9), out: 1000 })] });
+  writeProjects(root, { 'C--Users-Alex-app/sess/subagents/agent-1.jsonl': [line({ at: L(2026, 10, 3, 9), out: 1000 })] });
   const s = summarize({ now: L(2026, 10, 4, 9), dirs: [root] });
-  assert.deepStrictEqual(Object.keys(s.byProject), ['C--Users-Eli-app']);
+  assert.deepStrictEqual(Object.keys(s.byProject), ['C--Users-Alex-app']);
 });
 
 test('same folder name in two places gets disambiguated', () => {

@@ -12,7 +12,7 @@ const { render: renderDash } = require('../lib/dashboard');
 
 const L = (y, mo, d, h, mi, s) => new Date(y, mo - 1, d, h || 0, mi || 0, s || 0);
 const close = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-9, (msg || '') + ` expected ${b}, got ${a}`);
-const HUB = 'C:\\Users\\Eli\\work\\hub';
+const HUB = 'C:\\Users\\Alex\\work\\hub';
 
 function scenario() {
   const root = tmpdir();
@@ -169,11 +169,11 @@ test('dashboard: sessions, branch breakdown and context card render, month headl
 
 test('dashboard footer shows the home folder as ~ (Windows and POSIX), leaves other paths alone', () => {
   const { tilde } = require('../lib/dashboard');
-  assert.strictEqual(tilde('C:\\Users\\Eli\\.claude\\projects', 'C:\\Users\\Eli'), '~\\.claude\\projects');
-  assert.strictEqual(tilde('c:\\users\\eli\\.claude\\projects', 'C:\\Users\\Eli\\'), '~\\.claude\\projects', 'case-insensitive, trailing slash ok');
-  assert.strictEqual(tilde('/home/eli/.claude/projects', '/home/eli'), '~/.claude/projects');
-  assert.strictEqual(tilde('D:\\logs\\projects', 'C:\\Users\\Eli'), 'D:\\logs\\projects');
-  assert.strictEqual(tilde('C:\\Users\\Elias\\.claude', 'C:\\Users\\Eli'), 'C:\\Users\\Elias\\.claude', 'a longer sibling name is not the home folder');
+  assert.strictEqual(tilde('C:\\Users\\Alex\\.claude\\projects', 'C:\\Users\\Alex'), '~\\.claude\\projects');
+  assert.strictEqual(tilde('c:\\users\\alex\\.claude\\projects', 'C:\\Users\\Alex\\'), '~\\.claude\\projects', 'case-insensitive, trailing slash ok');
+  assert.strictEqual(tilde('/home/alex/.claude/projects', '/home/alex'), '~/.claude/projects');
+  assert.strictEqual(tilde('D:\\logs\\projects', 'C:\\Users\\Alex'), 'D:\\logs\\projects');
+  assert.strictEqual(tilde('C:\\Users\\Alexa\\.claude', 'C:\\Users\\Alex'), 'C:\\Users\\Alexa\\.claude', 'a longer sibling name is not the home folder');
   assert.strictEqual(tilde('/x/y', undefined), '/x/y');
   const s = scenario();
   const html = renderDash(s, derive(s, { budget: 1000, warn: 75, crit: 90 }), { nonce: 'n', home: path.dirname(s.dirs[0]) });

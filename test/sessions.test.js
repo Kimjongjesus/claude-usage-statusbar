@@ -121,14 +121,14 @@ test('context size = input + cache read + cache write of the last MAIN-conversat
 test('pickActive: latest session, a workspace match wins (Windows paths compare case-insensitively), stale sessions are not active', () => {
   const now = L(2026, 10, 3, 12);
   const mk = (sid, cwd, minsAgo) => ({ sid, cwd, lastCtxAt: new Date(+now - minsAgo * 60000) });
-  const list = [mk('latest', 'D:\\other\\thing', 5), mk('mine', 'C:\\Users\\Eli\\work\\hub', 30)];
+  const list = [mk('latest', 'D:\\other\\thing', 5), mk('mine', 'C:\\Users\\Alex\\work\\hub', 30)];
   assert.strictEqual(pickActive(list, { now }).session.sid, 'latest');
-  const p = pickActive(list, { now, workspaceDirs: ['c:\\users\\eli\\WORK\\hub\\'] });
+  const p = pickActive(list, { now, workspaceDirs: ['c:\\users\\alex\\WORK\\hub\\'] });
   assert.strictEqual(p.session.sid, 'mine'); assert.ok(p.inWorkspace && p.active);
   assert.strictEqual(pickActive(list, { now, workspaceDirs: ['/nowhere'] }).session.sid, 'latest', 'no match falls back to the latest');
   assert.strictEqual(pickActive([mk('old', 'C:\\a', 61)], { now }).active, false);
   assert.strictEqual(pickActive([], { now }), null);
-  assert.ok(within('C:\\Users\\Eli\\work\\hub\\sub', 'c:/users/eli/work/hub'));
+  assert.ok(within('C:\\Users\\Alex\\work\\hub\\sub', 'c:/users/alex/work/hub'));
   assert.ok(!within('/home/a/hub2', '/home/a/hub'), 'a sibling folder with a longer name is not inside');
 });
 

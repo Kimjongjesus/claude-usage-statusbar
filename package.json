@@ -1,8 +1,8 @@
 {
   "name": "claude-usage-statusbar",
   "displayName": "Claude Usage Status Bar",
-  "description": "Month-to-date Claude Code spend vs. your monthly budget, with a themed dashboard, per-session and per-branch cost, a context meter, a waste report and opt-in token-saver hooks. Resets on the 1st. Local-only, zero dependencies, no network.",
-  "version": "0.3.0",
+  "description": "Month-to-date Claude Code spend vs. your monthly budget, an orchestration hub for every project and session, plan handoff to a fresh session with a suggested model and effort, a themed dashboard, a context meter, a waste report and opt-in token-saver hooks. Local-only, zero dependencies, no network.",
+  "version": "0.4.0",
   "publisher": "kimjongjesus",
   "license": "MIT",
   "scripts": { "test": "node test/run.js" },
@@ -20,11 +20,18 @@
   "contributes": {
     "commands": [
       { "command": "claudeUsage.showDetails", "title": "Claude Usage: Open Dashboard" },
+      { "command": "claudeUsage.showHub", "title": "Claude Usage: Open Orchestration Hub" },
+      { "command": "claudeUsage.sendPlan", "title": "Claude Usage: Send a Plan to a New Session" },
+      { "command": "claudeUsage.setupHandoff", "title": "Claude Usage: Set Up Plan Handoff" },
+      { "command": "claudeUsage.hubAction", "title": "Claude Usage: Hub Action" },
       { "command": "claudeUsage.wasteReport", "title": "Claude Usage: Waste Report" },
       { "command": "claudeUsage.installHooks", "title": "Claude Usage: Install Token-Saver Hooks" },
       { "command": "claudeUsage.setBudget", "title": "Claude Usage: Set Monthly Budget" },
       { "command": "claudeUsage.refresh", "title": "Claude Usage: Refresh" }
     ],
+    "menus": {
+      "commandPalette": [ { "command": "claudeUsage.hubAction", "when": "false" } ]
+    },
     "configuration": {
       "title": "Claude Usage",
       "properties": {
@@ -40,7 +47,9 @@
         "claudeUsage.refreshSeconds": { "type": "number", "default": 30, "minimum": 5, "description": "Safety-net rescan interval in seconds. File changes also trigger a refresh within a few seconds." },
         "claudeUsage.contextWindow": { "type": "number", "default": 200000, "minimum": 1000, "description": "Context window of the model you use, in tokens. Used for the context meter (ctx 142k / 200k). Set 1000000 for a 1M-context model." },
         "claudeUsage.contextNudgeAt": { "type": "number", "default": 150000, "minimum": 0, "description": "One notice per session when its context reaches this many tokens (what each request re-sends, and what /compact or /clear would save). 0 turns the notice off." },
-        "claudeUsage.contextHintAtPercent": { "type": "number", "default": 50, "minimum": 1, "maximum": 100, "description": "Show a 'ctx 142k' hint in the status bar once the current session's context is at least this % of the context window." }
+        "claudeUsage.contextHintAtPercent": { "type": "number", "default": 50, "minimum": 1, "maximum": 100, "description": "Show a 'ctx 142k' hint in the status bar once the current session's context is at least this % of the context window." },
+        "claudeUsage.showHubItem": { "type": "boolean", "default": true, "description": "Show the orchestration hub item in the status bar ('2 live', '1 waiting · 2 live'). Click it to open the hub." },
+        "claudeUsage.planHandoffPrompt": { "type": "boolean", "default": true, "description": "When the Plan Handoff hook saves a new plan in one of this window's folders, ask once whether to send it to a new Claude Code session (with a suggested model and effort)." }
       }
     }
   }

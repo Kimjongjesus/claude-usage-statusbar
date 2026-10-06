@@ -41,15 +41,15 @@ test('runtime code only requires an allow-list of local/builtin modules (no netw
 
 // The installer is the one module allowed to write, and extension.js only reaches it after a modal confirmation
 // (tested in install.test.js). Everything else, and every hook script but the budget guard's state file, is read-only.
-const WRITERS = new Set(['hooks-install.js', 'budget-guard.js']);
-test('read-only on Claude logs: runtime code never writes, deletes or renames files (installer and budget-guard state excepted)', () => {
+const WRITERS = new Set(['hooks-install.js', 'budget-guard.js', 'save-plan.js']);
+test('read-only on Claude logs: runtime code never writes, deletes or renames files (installer, budget-guard state and the plan-handoff hook excepted)', () => {
   for (const file of runtimeFiles().concat(hookFiles())) {
     const src = stripComments(fs.readFileSync(file, 'utf8'));
     if (WRITERS.has(path.basename(file))) continue;
     assert.ok(!FS_WRITE.test(src), path.basename(file) + ' mutates the filesystem');
   }
   const only = runtimeFiles().concat(hookFiles()).filter((f) => FS_WRITE.test(stripComments(fs.readFileSync(f, 'utf8')))).map((f) => path.basename(f)).sort();
-  assert.deepStrictEqual(only, ['budget-guard.js', 'hooks-install.js'], 'unexpected writers: ' + only.join(','));
+  assert.deepStrictEqual(only, ['budget-guard.js', 'hooks-install.js', 'save-plan.js'], 'unexpected writers: ' + only.join(','));
 });
 
 test('manifest: no telemetry-ish contributions and the "estimate" disclosure is in the README', () => {
@@ -61,10 +61,10 @@ test('manifest: no telemetry-ish contributions and the "estimate" disclosure is 
 
 test('manifest declares the commands the code registers', () => {
   const declared = pkg.contributes.commands.map((c) => c.command).sort();
-  assert.deepStrictEqual(declared, ['claudeUsage.installHooks', 'claudeUsage.refresh', 'claudeUsage.setBudget', 'claudeUsage.showDetails', 'claudeUsage.wasteReport']);
+  assert.deepStrictEqual(declared, ['claudeUsage.hubAction', 'claudeUsage.installHooks', 'claudeUsage.refresh', 'claudeUsage.sendPlan', 'claudeUsage.setBudget', 'claudeUsage.setupHandoff', 'claudeUsage.showDetails', 'claudeUsage.showHub', 'claudeUsage.wasteReport']);
   const src = fs.readFileSync(path.join(ROOT, 'extension.js'), 'utf8');
   for (const c of declared) assert.ok(src.includes(`'${c}'`), c);
-  assert.strictEqual(pkg.version, '0.3.0');
+  assert.strictEqual(pkg.version, '0.4.0');
   const titles = Object.fromEntries(pkg.contributes.commands.map((c) => [c.command, c.title]));
   assert.strictEqual(titles['claudeUsage.wasteReport'], 'Claude Usage: Waste Report');
   assert.strictEqual(titles['claudeUsage.installHooks'], 'Claude Usage: Install Token-Saver Hooks');

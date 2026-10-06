@@ -10,27 +10,29 @@ const { tmpdir, line, writeProjects, M15 } = require('./helpers');
 const L = (y, mo, d, h, mi, s) => new Date(y, mo - 1, d, h || 0, mi || 0, s || 0);
 
 function makeVscode() {
-  const v = { items: [], messages: [], panels: [], inputs: [], settings: {}, updates: [], cmds: {}, cfgListeners: [], infos: [], picks: [], pickQueue: [], docs: [], clipboard: [] };
+  const v = { items: [], messages: [], panels: [], inputs: [], settings: {}, updates: [], cmds: {}, cfgListeners: [], infos: [], picks: [], pickQueue: [], docs: [], clipboard: [], terminals: [], executed: [], infoQueue: [] };
   v.StatusBarAlignment = { Right: 2 };
   v.ConfigurationTarget = { Global: 1 };
   v.ViewColumn = { Active: -1 };
   v.ThemeColor = class { constructor(id) { this.id = id; } };
   v.MarkdownString = class { constructor(value, icons) { this.value = value; this.supportThemeIcons = icons; } };
+  v.Uri = { file: (p) => ({ scheme: 'file', fsPath: p }) };
   v.window = {
-    createStatusBarItem: () => { const i = { show() {}, dispose() {} }; v.items.push(i); return i; },
+    createStatusBarItem: () => { const i = { visible: false, show() { i.visible = true; }, hide() { i.visible = false; }, dispose() {} }; v.items.push(i); return i; },
     showWarningMessage: (m, ...rest) => { v.messages.push({ level: 'warn', m, rest }); const r = v.nextWarn; v.nextWarn = undefined; return Promise.resolve(r); },
     showErrorMessage: (m) => { v.messages.push({ level: 'crit', m }); return Promise.resolve(undefined); },
-    showInformationMessage: (m, ...buttons) => { v.infos.push({ m, buttons }); return Promise.resolve(v.nextInfo); },
+    showInformationMessage: (m, ...buttons) => { v.infos.push({ m, buttons }); return Promise.resolve(v.infoQueue.length ? v.infoQueue.shift() : v.nextInfo); },
     showInputBox: (o) => { v.inputs.push(o); return Promise.resolve(v.nextInput); },
     showQuickPick: (items, o) => { v.picks.push({ items, o }); const r = v.pickQueue.shift(); return Promise.resolve(typeof r === 'function' ? r(items) : r); },
     showTextDocument: () => Promise.resolve(),
+    createTerminal: (o) => { const t = { opts: o, sent: [], shown: false, show() { t.shown = true; }, sendText(s) { t.sent.push(s); } }; v.terminals.push(t); return t; },
     createWebviewPanel: (type, title, col, opts) => {
       const p = { type, title, opts, webview: { html: '' }, reveal() {}, onDidDispose(cb) { p._dispose = cb; } };
       v.panels.push(p); return p;
     },
   };
   v.env = { clipboard: { writeText: (t) => { v.clipboard.push(t); return Promise.resolve(); } } };
-  v.commands = { registerCommand: (n, fn) => { v.cmds[n] = fn; return { dispose() {} }; } };
+  v.commands = { registerCommand: (n, fn) => { v.cmds[n] = fn; return { dispose() {} }; }, executeCommand: (...a) => { v.executed.push(a); return Promise.resolve(); } };
   v.workspace = {
     workspaceFolders: undefined,
     openTextDocument: (o) => { v.docs.push(o); return Promise.resolve(o); },
@@ -84,7 +86,7 @@ test('status bar rolls over on the 1st without a restart (poll timer)', async ()
     ext.activate(ctx);
     const item = vs.items[0];
     assert.strictEqual(item.text, '$(pulse) $450 ●●○○○ 45%', 'September month-to-date at 23:59');
-    assert.ok(vs.items.length === 1);
+    assert.strictEqual(vs.items.length, 2, 'usage item + hub item');
     // Claude keeps working past midnight: a message lands in a new log file on Oct 1.
     writeProjects(projects, { 'p/oct.jsonl': [line({ at: L(2026, 10, 1, 0, 0, 40), out: M15 * 2 })] });
     ext._test.setClock(() => L(2026, 10, 1, 0, 1));
@@ -217,7 +219,7 @@ test('hover is a themed-icon MarkdownString that only trusts its own commands', 
     ext.activate(ctx);
     const tip = vs.items[0].tooltip;
     assert.strictEqual(tip.supportThemeIcons, true);
-    assert.deepStrictEqual(tip.isTrusted.enabledCommands.sort(), ['claudeUsage.refresh', 'claudeUsage.setBudget', 'claudeUsage.showDetails', 'claudeUsage.wasteReport']);
+    assert.deepStrictEqual(tip.isTrusted.enabledCommands.sort(), ['claudeUsage.refresh', 'claudeUsage.setBudget', 'claudeUsage.showDetails', 'claudeUsage.showHub', 'claudeUsage.wasteReport']);
   });
 });
 

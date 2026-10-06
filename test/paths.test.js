@@ -7,11 +7,11 @@ const { test } = require('./harness');
 const { resolveDirs, lastSegment, lastSegments } = require('../lib/paths');
 
 const W = path.win32;
-const win = (env, extra, home) => resolveDirs({ pathMod: W, env, homedir: home === undefined ? 'C:\\Users\\Eli' : home, extra });
+const win = (env, extra, home) => resolveDirs({ pathMod: W, env, homedir: home === undefined ? 'C:\\Users\\Alex' : home, extra });
 
 test('win32: default %USERPROFILE%\\.claude\\projects', () => {
-  const dirs = win({ USERPROFILE: 'C:\\Users\\Eli' });
-  assert.strictEqual(dirs[0], 'C:\\Users\\Eli\\.claude\\projects');
+  const dirs = win({ USERPROFILE: 'C:\\Users\\Alex' });
+  assert.strictEqual(dirs[0], 'C:\\Users\\Alex\\.claude\\projects');
   assert.ok(dirs.every((d) => !d.includes('/')), 'no POSIX separators leaked: ' + dirs.join(' | '));
 });
 
@@ -30,26 +30,26 @@ test('win32: CLAUDE_CONFIG_DIR may hold several dirs separated by ";" (not ":")'
 });
 
 test('win32: UNC and drive-root locations', () => {
-  assert.ok(win({ CLAUDE_CONFIG_DIR: '\\\\fileserver\\home\\eli\\claude' }).includes('\\\\fileserver\\home\\eli\\claude\\projects'));
+  assert.ok(win({ CLAUDE_CONFIG_DIR: '\\\\fileserver\\home\\alex\\claude' }).includes('\\\\fileserver\\home\\alex\\claude\\projects'));
   assert.ok(win({}, ['C:\\']).includes('C:\\'));
 });
 
 test('win32: %VAR% and ~ expand in user-provided dirs; unknown vars are left alone', () => {
-  const env = { USERPROFILE: 'C:\\Users\\Eli', OneDrive: 'C:\\Users\\Eli\\OneDrive' };
+  const env = { USERPROFILE: 'C:\\Users\\Alex', OneDrive: 'C:\\Users\\Alex\\OneDrive' };
   const dirs = win(env, ['%USERPROFILE%\\work\\.claude\\projects', '%onedrive%\\claude\\projects', '~\\extra\\projects']);
-  assert.ok(dirs.includes('C:\\Users\\Eli\\work\\.claude\\projects'));
-  assert.ok(dirs.includes('C:\\Users\\Eli\\OneDrive\\claude\\projects'), 'case-insensitive %var%');
-  assert.ok(dirs.includes('C:\\Users\\Eli\\extra\\projects'));
-  assert.ok(win(env, ['%NOPE%\\x']).includes('C:\\Users\\Eli\\%NOPE%\\x'), 'unknown %VAR% is not silently dropped');
+  assert.ok(dirs.includes('C:\\Users\\Alex\\work\\.claude\\projects'));
+  assert.ok(dirs.includes('C:\\Users\\Alex\\OneDrive\\claude\\projects'), 'case-insensitive %var%');
+  assert.ok(dirs.includes('C:\\Users\\Alex\\extra\\projects'));
+  assert.ok(win(env, ['%NOPE%\\x']).includes('C:\\Users\\Alex\\%NOPE%\\x'), 'unknown %VAR% is not silently dropped');
 });
 
 test('win32: dedupes case-insensitively and normalizes separators', () => {
-  const dirs = win({ USERPROFILE: 'C:\\Users\\Eli' }, ['c:\\users\\eli\\.CLAUDE\\projects', 'C:/Users/Eli/.claude/projects/']);
-  assert.strictEqual(dirs.filter((d) => d.toLowerCase() === 'c:\\users\\eli\\.claude\\projects').length, 1);
+  const dirs = win({ USERPROFILE: 'C:\\Users\\Alex' }, ['c:\\users\\alex\\.CLAUDE\\projects', 'C:/Users/Alex/.claude/projects/']);
+  assert.strictEqual(dirs.filter((d) => d.toLowerCase() === 'c:\\users\\alex\\.claude\\projects').length, 1);
 });
 
 test('win32: relative user dirs resolve under the home folder, never the process cwd', () => {
-  assert.ok(win({}, ['logs\\claude']).includes('C:\\Users\\Eli\\logs\\claude'));
+  assert.ok(win({}, ['logs\\claude']).includes('C:\\Users\\Alex\\logs\\claude'));
   assert.deepStrictEqual(resolveDirs({ pathMod: W, env: {}, homedir: '', extra: ['logs'] }), []);
 });
 
@@ -59,15 +59,15 @@ test('win32: home falls back to USERPROFILE when homedir is unavailable', () => 
 
 test('posix still works: HOME, CLAUDE_CONFIG_DIR with ":" lists, $VAR and ~', () => {
   const P = path.posix;
-  const dirs = resolveDirs({ pathMod: P, homedir: '/home/eli', env: { CLAUDE_CONFIG_DIR: '/a:/b/', HOME: '/home/eli', W: '/work' }, extra: ['$W/.claude/projects', '~/x/projects'] });
-  assert.deepStrictEqual(dirs.slice(0, 2), ['/home/eli/.claude/projects', '/home/eli/.config/claude/projects']);
-  for (const want of ['/a/projects', '/b/projects', '/work/.claude/projects', '/home/eli/x/projects']) assert.ok(dirs.includes(want), want + ' in ' + dirs.join(' | '));
+  const dirs = resolveDirs({ pathMod: P, homedir: '/home/alex', env: { CLAUDE_CONFIG_DIR: '/a:/b/', HOME: '/home/alex', W: '/work' }, extra: ['$W/.claude/projects', '~/x/projects'] });
+  assert.deepStrictEqual(dirs.slice(0, 2), ['/home/alex/.claude/projects', '/home/alex/.config/claude/projects']);
+  for (const want of ['/a/projects', '/b/projects', '/work/.claude/projects', '/home/alex/x/projects']) assert.ok(dirs.includes(want), want + ' in ' + dirs.join(' | '));
 });
 
 test('last path segment handles Windows and POSIX cwd values on any host', () => {
-  assert.strictEqual(lastSegment('C:\\Users\\Eli\\work\\payments-api'), 'payments-api');
-  assert.strictEqual(lastSegment('C:\\Users\\Eli\\work\\payments-api\\'), 'payments-api');
-  assert.strictEqual(lastSegment('/home/eli/app'), 'app');
+  assert.strictEqual(lastSegment('C:\\Users\\Alex\\work\\payments-api'), 'payments-api');
+  assert.strictEqual(lastSegment('C:\\Users\\Alex\\work\\payments-api\\'), 'payments-api');
+  assert.strictEqual(lastSegment('/home/alex/app'), 'app');
   assert.strictEqual(lastSegment('C:\\'), 'C:');
   assert.strictEqual(lastSegments('D:\\play\\app', 2), 'play/app');
 });

@@ -5,7 +5,7 @@ const { test } = require('./harness');
 const { writeProjects, asst, M15 } = require('./helpers');
 const { withExtension, L } = require('./extension.test');
 
-const HUB = 'C:\\Users\\Eli\\work\\hub';
+const HUB = 'C:\\Users\\Alex\\work\\hub';
 const tick = () => new Promise((r) => setImmediate(r));
 // one request that sent `ctx` tokens (almost all from the cache) and wrote a short answer
 const req = (at, sid, ctx, extra) => asst(Object.assign({ at, sid, cwd: HUB, branch: 'feature/sales', usage: { input: 2000, read: ctx - 2000, output: 1000 } }, extra || {}));
@@ -123,7 +123,7 @@ test('"Open Waste Report" in the nudge opens the report', async () => {
 });
 
 test('with several windows open, the session in THIS window\'s folder wins over a newer one elsewhere (Windows paths, any case)', async () => {
-  await withExtension((vs) => { vs.settings.monthlyBudgetUsd = 1000; vs.workspace.workspaceFolders = [{ uri: { fsPath: 'c:\\users\\eli\\WORK\\hub' } }]; }, async ({ vs, ext, ctx, projects }) => {
+  await withExtension((vs) => { vs.settings.monthlyBudgetUsd = 1000; vs.workspace.workspaceFolders = [{ uri: { fsPath: 'c:\\users\\alex\\WORK\\hub' } }]; }, async ({ vs, ext, ctx, projects }) => {
     ext._test.setClock(() => L(2026, 10, 10, 12, 0));
     writeProjects(projects, {
       'hub/mine.jsonl': [req(L(2026, 10, 10, 11, 30), 'mine', 120000)],
@@ -159,7 +159,7 @@ test('Waste Report command: locked-down webview, same CSP as the dashboard, live
     const p = vs.panels[0];
     assert.strictEqual(p.type, 'claudeUsageWaste'); assert.strictEqual(p.title, 'Claude Usage: Waste Report');
     assert.strictEqual(p.opts.enableScripts, false); assert.deepStrictEqual(p.opts.localResourceRoots, []);
-    assert.deepStrictEqual(p.opts.enableCommandUris.sort(), ['claudeUsage.installHooks', 'claudeUsage.refresh', 'claudeUsage.showDetails']);
+    assert.deepStrictEqual(p.opts.enableCommandUris.sort(), ['claudeUsage.installHooks', 'claudeUsage.refresh', 'claudeUsage.showDetails', 'claudeUsage.showHub']);
     assert.ok(p.webview.html.includes(`default-src 'none'`) && p.webview.html.includes('Waste Report') && p.webview.html.includes('Most expensive sessions'));
     assert.ok(!/<script/i.test(p.webview.html));
     const before = p.webview.html;

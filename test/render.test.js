@@ -9,7 +9,7 @@ const { render } = require('../lib/dashboard');
 function sample(over) {
   const s = Object.assign({
     month: '2026-10', year: 2026, monthIndex: 9, daysInMonth: 31, dayOfMonth: 14, elapsedDays: 13.5, messages: 420,
-    totalUsd: 412.3, assumedModels: [], dirs: ['/home/eli/.claude/projects'], history: {},
+    totalUsd: 412.3, assumedModels: [], dirs: ['/home/alex/.claude/projects'], history: {},
     daily: new Array(31).fill(0), byModel: { 'claude-opus-4-5-20251101': 300, 'claude-sonnet-4-5-20250929': 100, 'claude-haiku-4-5-20251001': 12.3 },
     byProject: { 'payments-api': 250, 'infra <tools>': 162.3 }, tokens: { input: 1200000, output: 800000, cacheWrite: 3400000, cacheRead: 91000000 },
     lastMessageAt: new Date(2026, 9, 14, 11, 20),

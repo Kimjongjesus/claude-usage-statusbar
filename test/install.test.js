@@ -41,16 +41,16 @@ test('settings snippet shipped in hooks/ matches what the installer generates, a
 });
 
 test('Windows paths: script paths, settings files and hook dir use backslashes (path.win32)', () => {
-  const home = 'C:\\Users\\Eli';
+  const home = 'C:\\Users\\Alex';
   const dir = hi.hooksDir(home, path.win32);
-  assert.strictEqual(dir, 'C:\\Users\\Eli\\.claude\\token-saver-hooks');
+  assert.strictEqual(dir, 'C:\\Users\\Alex\\.claude\\token-saver-hooks');
   const snip = hi.buildSnippet({ dir, budget: 750, picks: ALL, pathMod: path.win32 });
-  assert.strictEqual(snip.hooks.PreToolUse[0].hooks[0].args[0], 'C:\\Users\\Eli\\.claude\\token-saver-hooks\\guard-reads.js');
-  assert.deepStrictEqual(snip.hooks.UserPromptSubmit[0].hooks[0].args, ['C:\\Users\\Eli\\.claude\\token-saver-hooks\\budget-guard.js', '--budget', '750']);
-  assert.strictEqual(hi.settingsPath('user', { home, pathMod: path.win32 }), 'C:\\Users\\Eli\\.claude\\settings.json');
+  assert.strictEqual(snip.hooks.PreToolUse[0].hooks[0].args[0], 'C:\\Users\\Alex\\.claude\\token-saver-hooks\\guard-reads.js');
+  assert.deepStrictEqual(snip.hooks.UserPromptSubmit[0].hooks[0].args, ['C:\\Users\\Alex\\.claude\\token-saver-hooks\\budget-guard.js', '--budget', '750']);
+  assert.strictEqual(hi.settingsPath('user', { home, pathMod: path.win32 }), 'C:\\Users\\Alex\\.claude\\settings.json');
   assert.strictEqual(hi.settingsPath('project', { workspaceDir: 'C:\\work\\hub', pathMod: path.win32 }), 'C:\\work\\hub\\.claude\\settings.local.json');
   const p = hi.plan({ home, budget: 750, picks: ALL, scope: 'user', pathMod: path.win32 });
-  assert.ok(p.scripts.every((s) => s.startsWith('C:\\Users\\Eli\\.claude\\token-saver-hooks\\')) && p.libs[0] === 'C:\\Users\\Eli\\.claude\\token-saver-hooks\\lib\\usage.js');
+  assert.ok(p.scripts.every((s) => s.startsWith('C:\\Users\\Alex\\.claude\\token-saver-hooks\\')) && p.libs[0] === 'C:\\Users\\Alex\\.claude\\token-saver-hooks\\lib\\usage.js');
   // our own entries are recognised even though the path has backslashes (so a re-install replaces, not duplicates)
   const merged = hi.mergeSettings(hi.mergeSettings({}, snip), snip);
   assert.strictEqual(merged.hooks.PreToolUse.length, 1);
@@ -335,6 +335,48 @@ test('command: project install needs an open folder and writes only .claude/sett
   });
 });
 
+// ---- plan handoff set (v0.4) ------------------------------------------------------------------------------------
+test('handoff install set: ExitPlanMode entry, copies only its two scripts, and the two install sets never remove each other', () => {
+  const dir = 'C:\\Users\\Alex\\.claude\\token-saver-hooks';
+  const snip = hi.buildSnippet({ dir, picks: { handoff: true }, pathMod: path.win32 });
+  assert.deepStrictEqual(snip, { hooks: { PreToolUse: [{ matcher: 'ExitPlanMode', hooks: [{ type: 'command', command: 'node', args: [dir + '\\save-plan.js'], timeout: 10 }] }] } });
+  const both = hi.buildSnippet({ dir, picks: { guard: true, handoff: true }, pathMod: path.win32 });
+  assert.deepStrictEqual(both.hooks.PreToolUse.map((g) => g.matcher), ['Read|Grep|Glob', 'ExitPlanMode']);
+  const savers = hi.buildSnippet({ dir, picks: ALL, pathMod: path.win32 });
+  const withSavers = hi.mergeSettings({}, savers, hi.SETS.savers);
+  const withBoth = hi.mergeSettings(withSavers, snip, hi.SETS.handoff);
+  assert.deepStrictEqual(withBoth.hooks.PreToolUse.map((g) => g.matcher), ['Read|Grep|Glob', 'ExitPlanMode']);
+  assert.deepStrictEqual(hi.mergeSettings(withBoth, snip, hi.SETS.handoff), withBoth, 'handoff re-install is idempotent');
+  const fewer = hi.mergeSettings(withBoth, hi.buildSnippet({ dir, picks: { guard: true }, pathMod: path.win32 }), hi.SETS.savers);
+  assert.deepStrictEqual(Object.keys(fewer.hooks).sort(), ['PreToolUse'], 'unticked token savers are removed...');
+  assert.deepStrictEqual(fewer.hooks.PreToolUse.map((g) => g.matcher).sort(), ['ExitPlanMode', 'Read|Grep|Glob'], '...but the handoff hook stays');
+  // a script name that merely starts with ours is not ours
+  const lookalike = { hooks: { PreToolUse: [{ matcher: 'X', hooks: [{ type: 'command', command: 'node', args: [dir + '\\save-plan.js.bak'] }] }] } };
+  assert.strictEqual(hi.mergeSettings(lookalike, snip, hi.SETS.handoff).hooks.PreToolUse.length, 2);
+  const home = tmpdir('inst-');
+  const p = hi.plan({ home, picks: { handoff: true }, scope: 'user', set: 'handoff' });
+  assert.deepStrictEqual(p.scripts.map((s) => path.basename(s)), ['_common.js', 'save-plan.js']); assert.deepStrictEqual(p.libs, []);
+  hi.apply(p, ROOT);
+  assert.deepStrictEqual(fs.readdirSync(hi.hooksDir(home)).sort(), ['_common.js', 'save-plan.js']);
+  assert.strictEqual(read(path.join(hi.hooksDir(home), 'save-plan.js')), read(path.join(ROOT, 'hooks', 'save-plan.js')));
+  // the installed copy runs on its own
+  const proj = tmpdir('proj-');
+  const r = spawnSync(process.execPath, [path.join(hi.hooksDir(home), 'save-plan.js')], { input: JSON.stringify({ tool_name: 'ExitPlanMode', cwd: proj, tool_input: { plan: '# P' } }), encoding: 'utf8', env: Object.assign({}, process.env, { CLAUDE_PROJECT_DIR: '' }) });
+  assert.strictEqual(r.status, 0); assert.strictEqual(fs.readdirSync(path.join(proj, '.claude', 'handoffs')).filter((n) => n.endsWith('.md')).length, 1);
+});
+
+test('handoff install revalidates the settings file like the token-saver install (edited while the modal was open: nothing written)', () => {
+  const home = tmpdir('inst-');
+  const settings = path.join(home, '.claude', 'settings.json');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  fs.writeFileSync(settings, JSON.stringify({ model: 'sonnet' }));
+  const p = hi.plan({ home, picks: { handoff: true }, scope: 'user', set: 'handoff' });
+  fs.writeFileSync(settings, JSON.stringify({ model: 'opus' }));
+  const before = listAll(home);
+  assert.throws(() => hi.apply(p, ROOT), /changed while the confirmation was open/);
+  assert.deepStrictEqual(listAll(home), before);
+});
+
 // ---- templates --------------------------------------------------------------------------------------------------
 test('templates: CLAUDE.md starter and /new-dashboard command are generic, short, and use clear placeholders', () => {
   const md = read(path.join(ROOT, 'templates', 'CLAUDE.template.md'));
@@ -351,7 +393,7 @@ test('templates: CLAUDE.md starter and /new-dashboard command are generic, short
   assert.ok(/\$0/.test(cmd) && /\$ARGUMENTS/.test(cmd), 'uses the documented argument placeholders');
   assert.ok(/\{\{REGISTRY_FILE\}\}/.test(cmd) && /\{\{PATTERN_DIR\}\}/.test(cmd));
   assert.ok(!/Bash/.test(fm[1]), 'no shell access needed to scaffold');
-  for (const text of [md, cmd]) assert.ok(!/(eli|kimjong|\\Users\\|\/home\/)/i.test(text), 'nothing personal baked in');
+  for (const text of [md, cmd]) assert.ok(!/(kimjong|\\Users\\|\/home\/)/i.test(text), 'nothing personal baked in');
 });
 
 test('hooks README states plainly what the API cannot do', () => {

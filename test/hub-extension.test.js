@@ -142,7 +142,8 @@ test('plan handoff: Change lets you pick model and effort; Skip records it; the 
     assert.deepStrictEqual(vs.picks[1].items.map((i) => i.id), ['high', 'low', 'medium', 'xhigh', 'max'], 'suggested effort first, then the levels `claude --help` lists');
     assert.ok(/^claude --model sonnet --effort low "@\.claude\/handoffs\/20261014-145900\.md /.test(vs.terminals[0].sent[0]));
     // "Other model…" goes through a validated input box
-    plan(ws, '20261014-145930.md', '# Small fix\n- src/a.ts\n', ago(0.5));
+    const fm = (title) => `---\nsource: ExitPlanMode\nsession_id: S1\ncwd: ${ws}\ncreated: x\n---\n\n# ${title}\n- src/a.ts\n`;
+    plan(ws, '20261014-145930.md', fm('Small fix'), ago(0.5));
     vs.infoQueue = ['Change'];
     vs.pickQueue = [(items) => items.find((i) => i.id === 'other'), (items) => items.find((i) => i.id === 'max')];
     vs.nextInput = 'claude-opus-4-5-20251101';
@@ -151,17 +152,55 @@ test('plan handoff: Change lets you pick model and effort; Skip records it; the 
     assert.ok(box.validateInput('opus; rm -rf ~') && !box.validateInput('claude-opus-4-5-20251101'));
     assert.ok(vs.terminals[1].sent[0].startsWith('claude --model claude-opus-4-5-20251101 --effort max '));
     // Skip
-    plan(ws, '20261014-145950.md', '# Another\n', ago(0.2));
+    plan(ws, '20261014-145950.md', fm('Another'), ago(0.2));
     vs.infoQueue = ['Skip'];
     ext._test.checkHandoffs(); await tick();
     assert.strictEqual(vs.terminals.length, 2);
     assert.ok(Object.values(store.handoffStatus).includes('skipped'));
     // turned off
     vs.settings.planHandoffPrompt = false;
-    plan(ws, '20261014-150000.md', '# Quiet\n', NOW);
+    plan(ws, '20261014-150000.md', fm('Quiet'), NOW);
     const n = vs.infos.length;
     ext._test.checkHandoffs(); await tick();
     assert.strictEqual(vs.infos.length, n, 'no prompt when planHandoffPrompt is false');
+  });
+});
+
+test('plan handoff: only plans written by a session on this machine are offered on their own, and never in an untrusted workspace', async () => {
+  const ws = tmpdir('ws-');
+  await withExtension((vs) => { vs.settings.monthlyBudgetUsd = 1000; vs.workspace.workspaceFolders = [{ uri: { fsPath: ws } }]; }, async ({ vs, ext, ctx, projects, store }) => {
+    sessions(projects, ws);
+    // a plan file that came with a cloned repo: unknown session id, or no front matter at all
+    plan(ws, '20261014-145900.md', PLAN.replace('S1', 'not-a-local-session').replace('CWD', ws), ago(1));
+    plan(ws, '20261014-145910.md', '# Plan: drop the users table\n', ago(1));
+    ext._test.setClock(() => NOW);
+    vs.infoQueue = ['Send'];
+    ext.activate(ctx);
+    await tick();
+    assert.strictEqual(vs.infos.filter((i) => /^Send this plan/.test(i.m)).length, 0, 'not offered automatically');
+    assert.strictEqual(vs.terminals.length, 0);
+    assert.ok(!(store.handoffsSeen || []).length, 'left pending, not marked as offered');
+    // the session shows up in the logs a moment later (the hook can be faster than the log refresh): now it is offered
+    writeProjects(projects, { 'ws/late.jsonl': [asst({ at: ago(1), sid: 'not-a-local-session', cwd: ws, usage: { write5m: 20000, output: 300 }, stop: 'tool_use' })] });
+    vs.infoQueue = ['Skip'];
+    ext._test.refresh(); await tick();
+    const offers = vs.infos.filter((i) => /^Send this plan/.test(i.m));
+    assert.strictEqual(offers.length, 1); assert.ok(!/no Claude Code session on this machine/.test(offers[0].m));
+    // picking the unverified one by hand works, with a warning and as a modal
+    vs.infoQueue = [undefined];
+    await vs.cmds['claudeUsage.hubAction']({ op: 'handoff', name: '20261014-145910.md', root: 0 });
+    const manual = vs.infos[vs.infos.length - 1];
+    assert.ok(/no Claude Code session on this machine wrote this plan/.test(manual.m)); assert.deepStrictEqual(manual.buttons[0], { modal: true });
+    assert.strictEqual(vs.terminals.length, 0, 'dismissed: nothing launched');
+  });
+  const ws2 = tmpdir('ws-');
+  await withExtension((vs) => { vs.settings.monthlyBudgetUsd = 1000; vs.workspace.workspaceFolders = [{ uri: { fsPath: ws2 } }]; vs.workspace.isTrusted = false; }, async ({ vs, ext, ctx, projects }) => {
+    sessions(projects, ws2);
+    plan(ws2, '20261014-145900.md', PLAN.replace('CWD', ws2), ago(1));
+    ext._test.setClock(() => NOW);
+    ext.activate(ctx);
+    await tick();
+    assert.strictEqual(vs.infos.filter((i) => /^Send this plan/.test(i.m)).length, 0, 'untrusted workspace: no automatic offer');
   });
 });
 

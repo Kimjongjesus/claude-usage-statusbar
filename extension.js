@@ -268,9 +268,16 @@ function checkHandoffs() {
     hoList = handoffs.list(workspaceDirs());
     if (before !== hoList.map(handoffs.keyOf).join(',')) renderHubPanel();
     if (prompting || !cfg().handoffPrompt) return;
+    // Only plans that a Claude Code session on this machine wrote (its session id is in the local logs) are offered on
+    // their own, and never in an untrusted workspace: a plan file that arrived with a cloned repo is not prompted for.
+    if (vscode.workspace.isTrusted === false) return;
+    const known = new Set(((last && last.s.sessions) || []).map((x) => x.sid));
     const seen = ctx.globalState.get('handoffsSeen', []);
-    const fresh = handoffs.pending(hoList, seen, clock());
-    if (!fresh.length) return;
+    const fresh = handoffs.pending(hoList, seen, clock()).filter((e) => {
+      const h = handoffs.read(e);
+      return !!h && h.meta.source === 'ExitPlanMode' && known.has(h.meta.session_id);
+    });
+    if (!fresh.length) return; // an unverified plan stays pending and is checked again on the next refresh
     // Persist first (like the other notices): a refresh, a second window or a restart never repeats the offer.
     ctx.globalState.update('handoffsSeen', seen.concat(fresh.map(handoffs.keyOf)).slice(-300));
     prompting = true;
@@ -300,7 +307,9 @@ async function offerHandoff(e, fromHub) {
   const a = adviceFor(e);
   if (!a) return;
   const { h, sug, sav } = a;
-  const msg = `Send this plan to a new session? "${h.title}". Suggested: ${advice.label(sug.model, sug.effort)}. ${sug.reason} ${sav.text}`;
+  const known = ((last && last.s.sessions) || []).some((x) => x.sid === h.meta.session_id);
+  const origin = known ? '' : ' Note: no Claude Code session on this machine wrote this plan; read it before you send it.';
+  const msg = `Send this plan to a new session? "${h.title}". Suggested: ${advice.label(sug.model, sug.effort)}. ${sug.reason} ${sav.text}${origin}`;
   const pick = await vscode.window.showInformationMessage(msg, { modal: !!fromHub }, 'Send', 'Change', 'Skip');
   if (pick === 'Send') return launchHandoff(e, sug.model, sug.effort);
   if (pick === 'Change') {

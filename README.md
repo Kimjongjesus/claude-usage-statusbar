@@ -70,6 +70,7 @@ When you plan in one session, the plan is usually best carried out by a **fresh*
 - **Send** opens a new terminal in the project folder and runs `claude --model <model> --effort <effort> "@.claude/handoffs/<file>.md Implement this plan. ..."`. The `@` mention makes Claude Code put the whole plan into the first prompt. Stop or reject the plan in the old session yourself; the extension never touches it.
 - **Change** lets you pick the model (Opus, Sonnet, or any model name) and the effort (`low`, `medium`, `high`, `xhigh`, `max`); the suggestion is first, so Enter accepts it.
 - **Skip** leaves it. Each plan is offered once; **Claude Usage: Send a Plan to a New Session** (or **Send…** in the hub) brings it back later.
+- Only plans written by a Claude Code session on this machine (its session id is in your local logs) are offered on their own, and never in an untrusted workspace, so a plan file that arrives with a cloned repo does not pop up. You can still send such a file by hand; the dialog then says that no local session wrote it.
 
 | Send: the new session's command, dark | Light |
 |---|---|
